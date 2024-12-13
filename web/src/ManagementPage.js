@@ -192,17 +192,21 @@ function ManagementPage(props) {
             themeAlgorithm={props.themeAlgorithm}
             onChange={props.setLogoAndThemeAlgorithm} />
           <LanguageSelect languages={props.account.organization.languages} />
-          <Tooltip title="Click to open AI assitant">
-            <div className="select-box" onClick={props.openAiAssistant}>
-              <DeploymentUnitOutlined style={{fontSize: "24px"}} />
-            </div>
-          </Tooltip>
+          {
+            Conf.AiAssistantUrl?.trim() && (
+              <Tooltip title="Click to open AI assistant">
+                <div className="select-box" onClick={props.openAiAssistant}>
+                  <DeploymentUnitOutlined style={{fontSize: "24px"}} />
+                </div>
+              </Tooltip>
+            )
+          }
           <OpenTour />
-          {Setting.isAdminUser(props.account) && !Setting.isMobile() && (props.uri.indexOf("/trees") === -1) &&
+          {Setting.isAdminUser(props.account) && (props.uri.indexOf("/trees") === -1) &&
                         <OrganizationSelect
                           initValue={Setting.getOrganization()}
                           withAll={true}
-                          style={{marginRight: "20px", width: "180px", display: "flex"}}
+                          style={{marginRight: "20px", width: "180px", display: !Setting.isMobile() ? "flex" : "none"}}
                           onChange={(value) => {
                             Setting.setOrganization(value);
                           }}

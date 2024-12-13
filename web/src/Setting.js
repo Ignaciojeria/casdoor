@@ -233,6 +233,10 @@ export const OtherProviderInfo = {
       logo: `${StaticBaseUrl}/img/casdoor.png`,
       url: "https://casdoor.org/docs/provider/storage/overview",
     },
+    "CUCloud OSS": {
+      logo: `${StaticBaseUrl}/img/social_cucloud.png`,
+      url: "https://www.cucloud.cn/product/oss.html",
+    },
   },
   SAML: {
     "Aliyun IDaaS": {
@@ -418,6 +422,9 @@ export function getCountryCode(country) {
 }
 
 export function getCountryCodeData(countryCodes = phoneNumber.getCountries()) {
+  if (countryCodes?.includes("All")) {
+    countryCodes = phoneNumber.getCountries();
+  }
   return countryCodes?.map((countryCode) => {
     if (phoneNumber.isSupportedCountry(countryCode)) {
       const name = initCountries().getName(countryCode, getLanguage());
@@ -436,10 +443,10 @@ export function getCountryCodeOption(country) {
     <Option key={country.code} value={country.code} label={`+${country.phone}`} text={`${country.name}, ${country.code}, ${country.phone}`} >
       <div style={{display: "flex", justifyContent: "space-between", marginRight: "10px"}}>
         <div>
-          {getCountryImage(country)}
+          {country.code === "All" ? null : getCountryImage(country)}
           {`${country.name}`}
         </div>
-        {`+${country.phone}`}
+        {country.code === "All" ? null : `+${country.phone}`}
       </div>
     </Option>
   );
@@ -917,7 +924,7 @@ export function getClickable(text) {
   return (
     <a onClick={() => {
       copy(text);
-      showMessage("success", "Copied to clipboard");
+      showMessage("success", i18next.t("general:Copied to clipboard successfully"));
     }}>
       {text}
     </a>
@@ -1075,6 +1082,7 @@ export function getProviderTypeOptions(category) {
         {id: "Google Cloud Storage", name: "Google Cloud Storage"},
         {id: "Synology", name: "Synology"},
         {id: "Casdoor", name: "Casdoor"},
+        {id: "CUCloud OSS", name: "CUCloud OSS"},
       ]
     );
   } else if (category === "SAML") {
@@ -1168,7 +1176,7 @@ export function renderLogo(application) {
 
 function isSigninMethodEnabled(application, signinMethod) {
   if (application && application.signinMethods) {
-    return application.signinMethods.filter(item => item.name === signinMethod).length > 0;
+    return application.signinMethods.filter(item => item.name === signinMethod && item.rule !== "Hide password").length > 0;
   } else {
     return false;
   }
@@ -1547,10 +1555,30 @@ export function getDefaultHtmlEmailContent() {
 
 export function getCurrencyText(product) {
   if (product?.currency === "USD") {
-    return i18next.t("product:USD");
+    return i18next.t("currency:USD");
   } else if (product?.currency === "CNY") {
-    return i18next.t("product:CNY");
+    return i18next.t("currency:CNY");
+  } else if (product?.currency === "EUR") {
+    return i18next.t("currency:EUR");
+  } else if (product?.currency === "JPY") {
+    return i18next.t("currency:JPY");
+  } else if (product?.currency === "GBP") {
+    return i18next.t("currency:GBP");
+  } else if (product?.currency === "AUD") {
+    return i18next.t("currency:AUD");
+  } else if (product?.currency === "CAD") {
+    return i18next.t("currency:CAD");
+  } else if (product?.currency === "CHF") {
+    return i18next.t("currency:CHF");
+  } else if (product?.currency === "HKD") {
+    return i18next.t("currency:HKD");
+  } else if (product?.currency === "SGD") {
+    return i18next.t("currency:SGD");
   } else {
     return "(Unknown currency)";
   }
+}
+
+export function isDarkTheme(themeAlgorithm) {
+  return themeAlgorithm && themeAlgorithm.includes("dark");
 }

@@ -364,7 +364,8 @@ func (c *ApiController) AddUser() {
 		return
 	}
 
-	msg := object.CheckUsername(user.Name, c.GetAcceptLanguage())
+	emptyUser := object.User{}
+	msg := object.CheckUpdateUser(&emptyUser, &user, c.GetAcceptLanguage())
 	if msg != "" {
 		c.ResponseError(msg)
 		return
@@ -474,6 +475,16 @@ func (c *ApiController) SetPassword() {
 
 	userId := util.GetId(userOwner, userName)
 
+	user, err := object.GetUser(userId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if user == nil {
+		c.ResponseError(fmt.Sprintf(c.T("general:The user: %s doesn't exist"), userId))
+		return
+	}
+
 	requestUserId := c.GetSessionUsername()
 	if requestUserId == "" && code == "" {
 		c.ResponseError(c.T("general:Please login first"), "Please login first")
@@ -489,7 +500,12 @@ func (c *ApiController) SetPassword() {
 			c.ResponseError(c.T("general:Missing parameter"))
 			return
 		}
+		if userId != c.GetSession("verifiedUserId") {
+			c.ResponseError(c.T("general:Wrong userId"))
+			return
+		}
 		c.SetSession("verifiedCode", "")
+		c.SetSession("verifiedUserId", "")
 	}
 
 	targetUser, err := object.GetUser(userId)
@@ -512,7 +528,11 @@ func (c *ApiController) SetPassword() {
 			}
 		}
 	} else if code == "" {
-		err = object.CheckPassword(targetUser, oldPassword, c.GetAcceptLanguage())
+		if user.Ldap == "" {
+			err = object.CheckPassword(targetUser, oldPassword, c.GetAcceptLanguage())
+		} else {
+			err = object.CheckLdapUserPassword(targetUser, oldPassword, c.GetAcceptLanguage())
+		}
 		if err != nil {
 			c.ResponseError(err.Error())
 			return
@@ -535,11 +555,34 @@ func (c *ApiController) SetPassword() {
 		return
 	}
 
+	application, err := object.GetApplicationByUser(targetUser)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if application == nil {
+		c.ResponseError(fmt.Sprintf(c.T("auth:the application for user %s is not found"), userId))
+		return
+	}
+
+	clientIp := util.GetClientIpFromRequest(c.Ctx.Request)
+	err = object.CheckEntryIp(clientIp, targetUser, application, organization, c.GetAcceptLanguage())
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
 	targetUser.Password = newPassword
 	targetUser.UpdateUserPassword(organization)
 	targetUser.NeedUpdatePassword = false
+	targetUser.LastChangePasswordTime = util.GetCurrentTime()
 
-	_, err = object.UpdateUser(userId, targetUser, []string{"password", "need_update_password", "password_type"}, false)
+	if user.Ldap == "" {
+		_, err = object.UpdateUser(userId, targetUser, []string{"password", "need_update_password", "password_type", "last_change_password_time"}, false)
+	} else {
+		err = object.ResetLdapPassword(targetUser, newPassword, c.GetAcceptLanguage())
+	}
+
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

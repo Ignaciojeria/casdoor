@@ -332,6 +332,9 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 	if err != nil {
 		return nil, err
 	}
+	if user == nil {
+		return "", fmt.Errorf("The user: %s doesn't exist", util.GetId(application.Organization, token.User))
+	}
 
 	if user.IsForbidden {
 		return &TokenError{
@@ -501,7 +504,7 @@ func GetPasswordToken(application *Application, username string, password string
 	}
 
 	if user.Ldap != "" {
-		err = checkLdapUserPassword(user, password, "en")
+		err = CheckLdapUserPassword(user, password, "en")
 	} else {
 		err = CheckPassword(user, password, "en")
 	}
